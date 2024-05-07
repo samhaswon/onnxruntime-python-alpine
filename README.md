@@ -2,6 +2,17 @@
 
 A dockerfile supporting onnxruntime with Python bindings on Alpine Linux
 
+## Usage
+
+
+```shell
+docker pull samhaswon/onnxruntime-python-alpine:latest
+```
+
+```shell
+docker pull samhaswon/onnxruntime-python-alpine:v1.17.3
+```
+
 ## Notes:
 
 - This could break with upstream changes. I might pin commits for the dependencies of this.
