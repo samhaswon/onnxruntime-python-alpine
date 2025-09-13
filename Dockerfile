@@ -1,4 +1,4 @@
-FROM python:3-alpine as base-build
+FROM python:3.12-alpine AS base-build
 
 # Install required apk packages
 RUN echo "***** Getting required packages *****" && \
@@ -21,7 +21,7 @@ RUN echo "***** Getting required packages *****" && \
     pip install --upgrade pip cython numpy pybind11 pytest wheel packaging setuptools
 
 
-FROM base-build as numpy-build
+FROM base-build AS numpy-build
 
 WORKDIR /svc
 
@@ -43,12 +43,12 @@ RUN pip install --no-index --find-links=dist/ numpy
 RUN mkdir wheels && cp dist/* wheels/
 
 
-FROM base-build as onnx-build
+FROM base-build AS onnx-build
 
 WORKDIR /svc
 
 # Get onnxruntime from source. This takes a while
-RUN git clone https://github.com/microsoft/onnxruntime.git --branch v1.17.3 --recursive
+RUN git clone https://github.com/microsoft/onnxruntime.git --branch v1.20.1 --recursive
 WORKDIR onnxruntime
 
 # Grab compilation dependencies. I don't think all of these are necessary, but it takes about 1 hour to check. Leave them.
@@ -76,7 +76,7 @@ RUN sed -i 's/set_target_properties(\${target_name} PROPERTIES COMPILE_WARNING_A
 RUN /bin/bash /svc/onnxruntime/build.sh --allow_running_as_root --config RelWithDebInfo --build_wheel --enable_pybind --skip_tests --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF CMAKE_CXX_FLAGS=-w --compile_no_warning_as_error # --parallel # --build_shared_lib
 
 
-FROM base-build as cv2-build
+FROM base-build AS cv2-build
 # This is only necessary for the test application
 
 # Grab opencv-python from source, since we need to compile that too
@@ -102,7 +102,7 @@ RUN pip install build
 RUN python -m build
 
 
-FROM python:3-alpine as installer
+FROM python:3.12-alpine AS installer
 
 # Setup the setup
 ENV PYTHONUNBUFFERED=TRUE
@@ -120,10 +120,10 @@ RUN echo "***** Installing dependencies *****" && \
     pip install --no-cache-dir coloredlogs flatbuffers packaging protobuf sympy && \
     pip install --no-cache-dir numpy>=1.26.4 && \
     # Comment out the line above and uncomment the one below to install the numpy wheel earlier.
-    # pip install --no-index --no-deps --find-links=/usr/src/app/wheels numpy &&
+    # pip install --no-index --no-deps --find-links=/usr/src/app/wheels numpy && \
     pip install --no-cache-dir --no-index --find-links=/usr/src/app/wheels onnxruntime
 
-FROM python:3-alpine as final
+FROM installer AS final
 
 # Grab all of the previously built packages without also having to have the wheels in this final stage.
 COPY --from=installer /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
